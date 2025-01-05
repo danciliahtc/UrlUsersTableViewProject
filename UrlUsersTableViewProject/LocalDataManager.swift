@@ -7,26 +7,34 @@
 
 import Foundation
 
-struct LocalDataManagerTests {
+enum NetworkError: Error {
+    case incorrectUrl
+    case responseError
+    case decodingFailed
+}
+
+struct LocalDataManager {
     
-    func readLocalJsonFile(name: String) {
+    func readData(completion: @escaping (Result<[User], NetworkError>) -> Void) {
         
-        let bundle = Bundle.main
-        
-        if let url = bundle.url(forResource:name, withExtension:nil) {
-            do {
-                let data = try Data(contentsOf: url)
-                
-                let jsonDecoder = JSONDecoder()
-                
-                let users = try jsonDecoder.decode([User].self, from: data)
-                
-                
-                print(users)
-                
-            } catch {
-                print(error.localizedDescription)
-            }
+        guard let url = URL(string: "https://jsonplaceholder.typicode.com/users") else {
+            completion(.failure(.incorrectUrl))
+            return
         }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            
+            guard let data = data, error == nil else {
+                completion(.failure(.responseError))
+                return
+            }
+            
+            do {
+                let decodedUsers = try JSONDecoder().decode([User].self, from: data)
+                completion(.success(decodedUsers))
+            } catch {
+                completion(.failure(.decodingFailed))
+            }
+        }.resume()
     }
 }

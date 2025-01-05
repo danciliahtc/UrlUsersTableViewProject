@@ -12,39 +12,25 @@ class UrlUsersViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     
     private var users: [User] = []
+    private let localDataManager = LocalDataManager()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         tableView.dataSource = self
         
-        getUsers()
-    }
-    
-    
-    private func getUsers() {
-        if let url = URL(string: "https://jsonplaceholder.typicode.com/users") {
-            let urlSession = URLSession.shared
-            
-            let dataTask = urlSession.dataTask(with: url) {
-                data, response, error in
-                if let data = data {
-                    let jsonDecoder = JSONDecoder()
-                    do {
-                        let decodedUsers = try
-                        jsonDecoder.decode([User].self,
-                        from: data)
-                        
-                        DispatchQueue.main.async {
-                            self.users = decodedUsers
-                            self.tableView.reloadData()
-                        }
-                    } catch {
-                        print(error.localizedDescription)
-                    }
+        localDataManager.readData { result in
+            switch result {
+            case .success(let users):
+                DispatchQueue.main.async {
+                    self.users = users
+                    self.tableView.reloadData()
+                }
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    print("Failed to load users: \(error.localizedDescription)")
                 }
             }
-            dataTask.resume()
         }
     }
 }
@@ -64,5 +50,4 @@ extension UrlUsersViewController: UITableViewDataSource {
         
         return cell ?? UITableViewCell()
     }
-    
 }
